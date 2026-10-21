@@ -93,12 +93,14 @@ def configure(workspace: Path, run_dir: Path, steps: int | None = None, resume: 
         config.update(metadata)
     config["data"].update(root=str(workspace.resolve()), classes=classes,
                           manifests_dir=str(run_dir / "manifests"), labels_file=str(run_dir / "labels.txt"),
-                          preprocess_dir=str(run_dir / "preprocess"))
+                          preprocess_dir=str(run_dir / "preprocess"),
+                          validation_percentage=20, testing_percentage=0)
     config["train"].update(run_dir=str(run_dir), num_workers=0, stop_file=str(run_dir / "stop.requested"),
                            resume=str(resume.resolve()) if resume is not None else None,
                            resume_step=resume_step, additional_steps=requested_steps,
                            steps=resume_step + requested_steps)
     config["test"]["checkpoint"] = str(run_dir / "best.pt")
+    config["test"]["split"] = "validation"
     config["onnx"]["output"] = str(run_dir / "onnx" / "ds_tc_resnet.onnx")
     config["train"]["log_interval"] = min(config["train"]["log_interval"], requested_steps)
     config["train"]["eval_interval"] = min(config["train"]["eval_interval"], requested_steps)

@@ -128,6 +128,10 @@ def test_complete_cache_rules_reuse_invalidation_and_dataset(preprocessing, corp
     assert first["skipped_no_speech"] == 1 and len(calls) == 3
     manifest = entries(config)
     assert Counter(entry["label_index"] for _, entry in manifest) == {0: 1000, 1: 103, 2: 140}
+    assert Counter(entry["label_index"] for split, entry in manifest if split == "training") == {0: 800, 1: 82, 2: 112}
+    assert Counter(entry["label_index"] for split, entry in manifest if split == "validation") == {0: 200, 1: 21, 2: 28}
+    assert not any(split == "testing" for split, _ in manifest)
+    assert first["counts"] == {"training": 994, "validation": 249, "testing": 0}
     cache = Path(config["data"]["preprocess_dir"])
     assert cache == Path(config["train"]["run_dir"]) / "preprocess"
     report = cache / "report.md"
@@ -143,10 +147,10 @@ def test_complete_cache_rules_reuse_invalidation_and_dataset(preprocessing, corp
     assert sum(plan["gain_db"] == 0 for plan in silence) == 500
     white = [entry for _, entry in manifest if entry["path"] is None]
     assert len(white) == 100 and all(-40 <= item["augmentation"]["gain_db"] <= -10 for item in white)
-    # Overlapping windows and all gain/position variants of one original stay
-    # in the same split, including the continuous silence recording.
-    for source in original:
-        assert len({split for split, entry in manifest if entry["path"] == source}) <= 1
+    # Augmented variants of each usable keyword recording can land in both sets.
+    for source in [workspace.row_dir(workspace.rows[0]) / "short.wav",
+                   workspace.row_dir(workspace.rows[0]) / "long.wav"]:
+        assert {split for split, entry in manifest if entry["path"] == str(source)} == {"training", "validation"}
     dictionary = json.loads((cache / "keywords/keyword1/vad.json").read_text())
     assert dictionary["no-speech.wav"]["Tstart"] is None
     assert dictionary["no-speech.wav"]["speech_clip"] is None
@@ -177,6 +181,7 @@ def test_complete_cache_rules_reuse_invalidation_and_dataset(preprocessing, corp
         no_dsp.setattr(p.MfccExtractor, "forward", fail)
         second = p.preprocess(config)
         assert second["built_sources"] == 0 and second["reused_sources"] == 5
+        assert entries(config) == manifest
         assert (cache / "keywords/keyword1/short.wav").is_file()
         assert "| 2 | keywords/keyword1 | test | 140 |" in report.read_text(encoding="utf-8")
         dataset = importlib.import_module("data.dataset").SpeechCommandsDataset(config, "training", training=True)
@@ -218,6 +223,9 @@ def test_forced_preprocessing_rebuilds_unchanged_data_and_refreshes_wavs(preproc
     assert refreshed["reused_sources"] == 0 and len(calls) == 8
     active = entries(config)
     assert Counter(entry["label_index"] for _, entry in active) == {0: 1000, 1: 107, 2: 60}
+    assert Counter(entry["label_index"] for split, entry in active if split == "training") == {0: 800, 1: 86, 2: 48}
+    assert Counter(entry["label_index"] for split, entry in active if split == "validation") == {0: 200, 1: 21, 2: 12}
+    assert not any(split == "testing" for split, _ in active)
     assert not any(entry["path"] and Path(entry["path"]).name == "long.wav" for _, entry in active)
     dictionary = json.loads((Path(config["data"]["preprocess_dir"]) / "keywords/keyword1/vad.json").read_text())
     assert "long.wav" not in dictionary

@@ -68,6 +68,46 @@ def test_recording_has_exact_pcm_format_and_duration(tmp_path, fake_input, secon
     assert list(tmp_path.iterdir()) == [result.path]
 
 
+@pytest.mark.parametrize("rate", [16000, 48000])
+def test_recording_discards_first_400ms_across_callback_blocks(tmp_path, monkeypatch, rate):
+    class BufferedInput:
+        def __init__(self, **kwargs):
+            self.callback = kwargs["callback"]
+            self.active = True
+
+        def __enter__(self):
+            samples = np.full(rate * 5 // 2, 2000, dtype="<i2")
+            samples[:rate * 400 // 1000] = 30000  # Simulated click in the first 400 ms.
+            for start in range(0, len(samples), 3000):
+                block = samples[start:start + 3000]
+                self.callback(block.tobytes(), len(block), None, None)
+            return self
+
+        def __exit__(self, *args):
+            self.active = False
+
+    def check_settings(**kwargs):
+        if kwargs["samplerate"] != rate:
+            raise audio.sd.PortAudioError("unsupported rate")
+
+    monkeypatch.setattr(audio.sd, "check_input_settings", check_settings)
+    monkeypatch.setattr(audio.sd, "query_devices", lambda *args: {"default_samplerate": rate})
+    monkeypatch.setattr(audio.sd, "RawInputStream", BufferedInput)
+    recorder = audio.Recorder()
+    recorder.start(tmp_path, 2, None, "row")
+    result = result_of(recorder)
+    assert result.error is None
+    with wave.open(str(result.path), "rb") as reader:
+        saved = np.frombuffer(reader.readframes(reader.getnframes()), dtype="<i2")
+    assert len(saved) == 2 * audio.SAMPLE_RATE
+    if rate == audio.SAMPLE_RATE:
+        assert np.all(saved == 2000)
+    else:
+        assert np.max(np.abs(saved[50:-50].astype(np.int32) - 2000)) <= 2
+    assert recorder.snapshot()["elapsed"] == 2
+    assert max(recorder.snapshot()["waveform"]) < 0.1
+
+
 def test_unsupported_rate_falls_back_and_resamples(tmp_path, fake_input, monkeypatch):
     def settings(**kwargs):
         if kwargs["samplerate"] == 16000:

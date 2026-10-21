@@ -20,6 +20,7 @@ SAMPLE_RATE = 16000
 KEYWORD_SECONDS = 2
 NOISE_SECONDS = 3
 SILENCE_SECONDS = 60
+START_DISCARD_MS = 400
 
 
 @dataclass
@@ -122,6 +123,7 @@ class Recorder:
                     fault.append("音频缓冲区溢出")
 
             limit, written = int(rate * seconds), 0
+            discard = round(rate * START_DISCARD_MS / 1000)
             with wave.open(str(partial), "wb") as writer:
                 writer.setnchannels(1)
                 writer.setsampwidth(2)
@@ -129,8 +131,6 @@ class Recorder:
                 with sd.RawInputStream(samplerate=rate, channels=1, dtype="int16", device=device,
                                        blocksize=1024, callback=callback) as stream:
                     last_data = time.monotonic()
-                    with self._lock:
-                        self._state["phase"] = "recording"
                     while written < limit and not self.cancel_event.is_set():
                         if fault:
                             raise RuntimeError("录音中断：" + fault[0] + "。请检查设备后重试。")
@@ -141,6 +141,16 @@ class Recorder:
                                 raise RuntimeError("麦克风没有返回音频，请检查设备连接和系统麦克风权限")
                             continue
                         last_data = time.monotonic()
+                        if discard:
+                            skipped = min(discard, len(block) // 2)
+                            block = block[skipped * 2:]
+                            discard -= skipped
+                            if discard:
+                                continue
+                            with self._lock:
+                                self._state["phase"] = "recording"
+                        if not block:
+                            continue
                         block = block[:(limit - written) * 2]
                         writer.writeframesraw(block)
                         written += len(block) // 2

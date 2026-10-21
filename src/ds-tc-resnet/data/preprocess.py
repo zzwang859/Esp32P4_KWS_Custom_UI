@@ -130,6 +130,28 @@ def load_feature(entry):
     return np.array(values[int(entry["feature_index"])], dtype=np.float32, copy=True)
 
 
+def split_workspace_samples(grouped, classes, validation_percentage, seed):
+    """Assign augmented MFCC samples per class after all sources are built."""
+    by_class = defaultdict(list)
+    for split in SPLITS:
+        for entry in grouped[split]:
+            by_class[entry["label_index"]].append(entry)
+    result = {split: [] for split in SPLITS}
+    for item in classes:
+        index = item["index"]
+        samples = by_class[index]
+        count = len(samples)
+        if not count:
+            continue
+        validation_count = (min(count - 1, max(1, math.floor(count * validation_percentage / 100 + 0.5)))
+                            if count > 1 else 0)
+        rng = np.random.default_rng(int(key([seed, "workspace_split", index])[:16], 16))
+        validation_indices = set(rng.permutation(count)[:validation_count])
+        for position, entry in enumerate(samples):
+            result["validation" if position in validation_indices else "training"].append(entry)
+    return result
+
+
 def write_report(root, classes, grouped):
     """Count active MFCC samples, excluding unreferenced historical cache files."""
     counts = {split: Counter(entry["label_index"] for entry in grouped[split]) for split in SPLITS}
@@ -213,8 +235,8 @@ def preprocess(config, *, force=False):
             sources.append(dict(path=str(path), split=split, label=entry["label"], label_index=entry["label_index"],
                                 sha256=digest(path), relative=path.relative_to(workspace).as_posix()))
     sources.sort(key=lambda source: (source["label_index"], source["relative"]))
-    # Source split assignments are inherited. All positions and gain variants of
-    # one recording/speaker remain together, including overlapping unknown clips.
+    # Workspace sources are staged together. Split only after all augmented
+    # samples exist; standalone datasets retain their source-level split.
     grouped = {split: [] for split in SPLITS}
     vad = None
     vad_dictionaries = {}
@@ -359,10 +381,14 @@ def preprocess(config, *, force=False):
     from data.prepare import split_for
     white = dict(path=None, sha256=key(["white_noise", seed]), relative="unknown/generated_white_noise",
                  label=data["classes"][1]["label"], label_index=1, split="training")
-    plans = [dict(gain_db=float(noise_rng.uniform(-40, -10)),
-                  split=split_for(Path(f"white_noise_{index}.wav"), data["validation_percentage"], data["testing_percentage"]))
-             for index in range(100)]
+    plans = [dict(gain_db=float(noise_rng.uniform(-40, -10))) for _ in range(100)]
+    if "classes" not in data:
+        for index, plan in enumerate(plans):
+            plan["split"] = split_for(Path(f"white_noise_{index}.wav"),
+                                      data["validation_percentage"], data["testing_percentage"])
     build(white, plans, kind="white_noise")
+    if "classes" in data:
+        grouped = split_workspace_samples(grouped, data["classes"], data["validation_percentage"], seed)
     for item in data["classes"]:
         if not any(entry["label_index"] == item["index"] for entry in grouped["training"]):
             raise ValueError(f"No usable training samples for class {item['index']} ({item['label']}); check VAD metadata")

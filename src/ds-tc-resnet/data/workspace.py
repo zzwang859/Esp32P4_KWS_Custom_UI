@@ -42,9 +42,6 @@ def workspace_classes(root: Path) -> list[dict]:
 
 
 def prepare_workspace(config: dict) -> dict[str, int]:
-    # Import here to keep the standalone Speech Commands path unchanged.
-    from data.prepare import split_for
-
     data = config["data"]
     classes = data["classes"]
     if [item["index"] for item in classes] != list(range(len(classes))):
@@ -55,28 +52,17 @@ def prepare_workspace(config: dict) -> dict[str, int]:
     root = Path(data["root"]).resolve()
     for item in classes:
         directory = Path(item["directory"])
-        entries = {name: [] for name in grouped}
+        found = False
         for wav in sorted(directory.rglob("*")):
             if not wav.is_file() or wav.suffix.lower() != ".wav":
                 continue
             if not wav.resolve().is_relative_to(root):
                 raise ValueError(f"Audio must stay inside the workspace: {wav}")
-            split = split_for(wav, data["validation_percentage"], data["testing_percentage"])
-            entries[split].append({"path": str(wav.resolve()), "label": item["label"],
-                                   "label_index": item["index"]})
-        if not any(entries.values()):
+            grouped["training"].append({"path": str(wav.resolve()), "label": item["label"],
+                                        "label_index": item["index"]})
+            found = True
+        if not found:
             raise ValueError(f"No WAV recordings for {item['label']}")
-        if not entries["training"]:
-            # Small collections still need training data. Move the entire speaker
-            # group so variants of the same source cannot leak between splits.
-            source = next(name for name in ("validation", "testing") if entries[name])
-            speaker = re.sub(r"_nohash_.*$", "", Path(entries[source][0]["path"]).name)
-            moved = [entry for entry in entries[source]
-                     if re.sub(r"_nohash_.*$", "", Path(entry["path"]).name) == speaker]
-            entries["training"].extend(moved)
-            entries[source] = [entry for entry in entries[source] if entry not in moved]
-        for name in grouped:
-            grouped[name].extend(entries[name])
     destination = Path(data["manifests_dir"])
     destination.mkdir(parents=True, exist_ok=True)
     for name, entries in grouped.items():

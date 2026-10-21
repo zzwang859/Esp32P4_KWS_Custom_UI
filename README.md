@@ -82,7 +82,7 @@ PYTHONPATH=src ./.venv/Scripts/python.exe -m kws_custom_ui
 
 固定类别顺序为 `index 0 = silence/`、`index 1 = unknown/`，其余类别按 `workspace.json` 的 `rows` 顺序从 index 2 开始，对应各行 `keywords/keywordn/`。类别显示名使用行文本，空文本使用目录名；类别名称必须唯一。静音直接使用 `silence/` 内的真实 WAV，所有类别都必须有录音。未列入配置的目录及 `delete-*` 归档不参与训练。
 
-每次训练独立保存到 `<工作区>/training/<时间戳>/`，包含 `classes.json`（类别 index、名称、源目录及行 ID）、`labels.txt`、`config.yaml`、训练/验证/测试清单、`training.log`、`best.pt`、`latest.pt`、TensorBoard 日志及 `onnx/ds_tc_resnet.onnx`。源录音不复制、不修改。训练结束后会用真实关键词音频核对 PyTorch 与 ONNX 输出，并写入 `verification.json`。数据太少而没有验证集时会明确跳过验证，`best.pt` 使用最新权重。
+每次训练独立保存到 `<工作区>/training/<时间戳>/`，包含 `classes.json`（类别 index、名称、源目录及行 ID）、`labels.txt`、`config.yaml`、训练/验证清单、`training.log`、`best.pt`、`latest.pt`、TensorBoard 日志及 `onnx/ds_tc_resnet.onnx`。源录音不复制、不修改。训练结束后会用真实关键词音频核对 PyTorch 与 ONNX 输出，并写入 `verification.json`。工作区在位置和增益增强后按每类切片数分配约 80% 训练集、20% 验证集；无独立测试集，测试流程使用验证集。
 
 接续训练保留原历史，并另建一个运行目录；恢复模型、优化器及累计步数，沿用历史模型结构、特征配置，同时重新读取当前语料。类别顺序、文本或目录映射改变时会拒绝接续，需选择重新开始训练，避免权重与类别含义错配。
 
@@ -154,7 +154,7 @@ workspace/test/
 
 音频统一输出为 **16 kHz、16 bit PCM、单声道 WAV**。设备不支持直接采集 16 kHz 时，自动使用设备默认采样率采集，并通过已有 scipy 做抗混叠重采样。音频文件名包含时间和随机标识，避免覆盖。关键词目录使用 `keyword1`、`keyword2` 等稳定名称，新增时取现有编号的最大值加一，不因编辑文本、删除其他行而改变。旧工作区中由随机 ID 命名的目录会在打开时自动迁移，原内容保留。
 
-录音在后台线程中进行，完成前只写入临时文件，成功后才发布为 WAV；取消、设备异常或输入溢出时丢弃不完整文件。强制终止进程可能留下 `.recording` 临时文件，不计入素材数量。首次使用请允许系统麦克风权限。波形表示实际输入信号，应用不会把采集到的声音强制置零。
+录音在后台线程中进行。每次打开麦克风后先丢弃前 400 ms 输入，再开始计时、显示波形并采集设定时长，因此保存的 WAV 仍为设定时长。完成前只写入临时文件，成功后才发布为 WAV；取消、设备异常或输入溢出时丢弃不完整文件。强制终止进程可能留下 `.recording` 临时文件，不计入素材数量。首次使用请允许系统麦克风权限。波形表示实际输入信号，应用不会把采集到的声音强制置零。
 
 ## 验证
 

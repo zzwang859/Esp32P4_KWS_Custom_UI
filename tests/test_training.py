@@ -67,6 +67,9 @@ def test_workspace_class_indices_and_manifests_use_only_configured_audio(pipelin
     counts = pipeline.prepare(config)
     assert config["train"]["steps"] == 10
     assert config["train"]["num_workers"] == 0
+    assert config["data"]["validation_percentage"] == 20
+    assert config["data"]["testing_percentage"] == 0
+    assert config["test"]["split"] == "validation"
     assert Path(config["data"]["preprocess_dir"]) == run_dir / "preprocess"
     classes = json.loads((run_dir / "classes.json").read_text(encoding="utf-8"))
     assert [(item["index"], item["label"]) for item in classes] == [
@@ -75,6 +78,7 @@ def test_workspace_class_indices_and_manifests_use_only_configured_audio(pipelin
     entries = [json.loads(line) for manifest in (run_dir / "manifests").glob("*.jsonl")
                for line in manifest.read_text(encoding="utf-8").splitlines()]
     assert sum(counts.values()) == 15
+    assert counts == {"training": 15, "validation": 0, "testing": 0}
     assert {entry["label_index"] for entry in entries} == set(range(5))
     for entry in entries:
         assert entry["path"] is not None

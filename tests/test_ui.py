@@ -337,7 +337,7 @@ def test_record_buttons_save_expected_wav_duration_and_directory(app, monkeypatc
             self.active = True
 
         def __enter__(self):
-            for _ in range(30):
+            for _ in range(34):
                 self.callback(b"\x00\x20" * 1600, 1600, None, None)
             return self
 
