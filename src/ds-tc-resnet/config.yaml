@@ -1,0 +1,65 @@
+project:
+  seed: 59185
+
+data:
+  root: data/mini_speech_commands
+  manifests_dir: data/manifests
+  labels_file: data/labels.txt
+  wanted_words: ["yes", "no", "up", "down", "left", "right"]
+  sample_rate: 16000
+  clip_duration_ms: 1000
+  validation_percentage: 10
+  testing_percentage: 10
+  silence_percentage: 10
+  unknown_percentage: 10
+
+features:
+  profile: mfcc40_16k_int16_state6_v1
+  window_size_ms: 30.0
+  window_stride_ms: 10.0
+  mel_bins: 80
+  mfcc_bins: 40
+  mel_low_hz: 20.0
+  mel_high_hz: 7000.0
+
+model:
+  profile: mfcc40_16k_int16_state6_v1
+  pooling_frames: 98
+  # non_stream, stream_internal, or stream_external
+  inference_mode: stream_external
+  filters: [64, 32, 32, 32, 64, 64]
+  repeats: [1, 1, 1, 1, 1, 1]
+  separable: [true, true, true, true, true, true]
+  residual: [false, true, true, true, false, false]
+  padding: [causal, causal, causal, causal, causal, causal]
+  kernel_sizes: [11, 13, 15, 17, 29, 1]
+  strides: [1, 1, 1, 1, 1, 1]
+  dilations: [1, 1, 1, 1, 2, 1]
+  pools: [1, 1, 1, 1, 1, 1]
+  dropout: 0.0
+
+train:
+  device: auto
+  steps: 3000
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0
+  num_workers: 2
+  log_interval: 20
+  eval_interval: 400
+  checkpoint_interval: 100
+  run_dir: logs/default
+  resume: null
+
+test:
+  split: testing
+  batch_size: 64
+  device: auto
+  checkpoint: logs/default/best.pt
+
+onnx:
+  # ONNX graphs are stateless, so streaming exports use external state.
+  mode: stream_external
+  opset: 17
+  chunk_frames: 1
+  output: onnx/ds_tc_resnet.onnx

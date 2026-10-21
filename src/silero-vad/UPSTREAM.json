@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/snakers4/silero-vad",
+  "tag": "v6.0",
+  "commit": "fba061dc5559f696e62171e9a0741782b0fdc23c",
+  "archive_url": "https://codeload.github.com/snakers4/silero-vad/zip/fba061dc5559f696e62171e9a0741782b0fdc23c",
+  "archive_sha256": "8285c6d7b9d07fc297c2e52ed5456fac3d16be0b01b360fa7ae125eda0ccd7ce",
+  "local_changes": [
+    "utils_vad.py: propagate inference errors instead of entering an interactive ipdb debugger"
+  ]
+}

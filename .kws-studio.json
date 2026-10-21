@@ -1,0 +1,13 @@
+{
+  "last_workspace": "E:\\KWS_Custom_UI\\workspace\\test",
+  "hid_device": {
+    "vid": "0x303A",
+    "pid": "0x8003",
+    "usage_page": "0xFF00",
+    "usage": "0x0001"
+  },
+  "recording": {
+    "silence_seconds": 60,
+    "noise_seconds": 3
+  }
+}

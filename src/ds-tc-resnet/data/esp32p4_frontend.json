@@ -1,0 +1,27 @@
+{
+  "frontend_profile": "mfcc40_16k_int16_state6_v1",
+  "source_model": "ds_tc_resnet_stream_external.onnx",
+  "source_sha256": "7ff161caded03c8beef17d3da0933bbe7143f731f5cc76421cdc25664a9f1a56",
+  "asset_sha256": "3282df32ef24e33100766409f64c80b61c92005592d9aadbe4a2e3483959457c",
+  "shapes": {
+    "window": [
+      480
+    ],
+    "mel_filters": [
+      224,
+      80
+    ],
+    "dct": [
+      80,
+      40
+    ],
+    "normalization": [
+      40
+    ]
+  },
+  "fft_size": 512,
+  "window_samples": 480,
+  "hop_samples": 160,
+  "magnitude_bins": 224,
+  "floor": 1e-12
+}
