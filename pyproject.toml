@@ -1,5 +1,5 @@
 [project]
-name = "kws_custom_ui"
+name = "esp32p4_kws_custom_ui"
 version = "0.1.0"
 description = "Lightweight pygame studio for keyword spotting audio collection"
 readme = "README.md"
