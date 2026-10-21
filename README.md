@@ -197,7 +197,7 @@ logits: E:\KWS_Custom_UI\workspace\test\infer_result.md
 
 识别事件随音频时间顺序输出，结束时汇总全部事件；没有关键词通过消抖时显示“未检测到通过消抖的关键词”。结果取决于所选模型与输入音频，上述示例用于说明格式。
 
-`infer.py` 从工作区的 `workspace.json` 读取 `kws_filter`；可通过 `--workspace` 指定工作区，默认使用 `workspace/test`。主界面右下角的“PC端仿真”使用当前工作区最近训练的 ONNX 模型和已选麦克风实时推理，显示同期波形。下方上半区显示仅含索引序号的逐帧 logits[概率]，每行最高概率项以蓝色高亮；下半区只显示通过 KWS 消抖后触发的关键词索引和概率。逐帧文本写入 `workspace/<工作区>/simulation/*.log`。参数在仿真窗口中调整后作用于后续音频帧，并保存到当前工作区。默认配置为：
+`infer.py` 从工作区的 `workspace.json` 读取 `kws_filter`；可通过 `--workspace` 指定工作区，默认使用 `workspace/test`。主界面右下角的“PC端仿真”使用当前工作区最近训练的 ONNX 模型和已选麦克风实时推理，显示同期波形。下方上半区显示仅含索引序号的逐帧 logits[概率]，每行最高概率项以蓝色高亮；下半区只显示通过 KWS 消抖后触发的关键词索引、标签和概率，例如 `[   44.08s] index=5 删除  46.69%`。逐帧文本写入 `workspace/<工作区>/simulation/*.log`。参数在仿真窗口中调整后作用于后续音频帧，并保存到当前工作区。默认配置为：
 
 ```json
 {

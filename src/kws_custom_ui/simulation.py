@@ -267,8 +267,9 @@ class SimulationWindow:
                                 log.write(line)
                                 self.messages.put(("line", (line, highlight)))
                                 if detected >= 2:
-                                    self.messages.put(("event", f"[{frame * .01:8.2f}s] index={detected}  "
-                                                                 f"概率={probabilities[detected] * 100:.2f}%\n"))
+                                    self.messages.put(("event", f"[{frame * .01:8.2f}s] index={detected} "
+                                                                 f"{engine.labels[detected]}  "
+                                                                 f"{probabilities[detected] * 100:.2f}%\n"))
         except Exception as exc:
             self.messages.put(("error", f"仿真停止：{exc}"))
 
